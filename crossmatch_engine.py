@@ -97,7 +97,7 @@ class CrossmatchEngine:
         if not patient.antibodies:
             return {"match": True, "reason": "No antibodies to match against"}
 
-        required antigens must avoid = []
+        required_antigens_must_avoid = []
         for ab in patient.antibodies:
             target_antigen = ab.replace("anti-", "")
             if target_antigen in unit.antigens:
