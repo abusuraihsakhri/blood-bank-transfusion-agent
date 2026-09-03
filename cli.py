@@ -13,6 +13,7 @@ Provides interactive & scriptable commands for:
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from typing import Any, Dict, List, Optional
@@ -191,6 +192,162 @@ def cmd_reaction_triage(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_batch(args: argparse.Namespace) -> int:
+    with open(args.input, mode="r", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        fieldnames = list(reader.fieldnames or [])
+        rows = list(reader)
+
+    out_fields = fieldnames + [
+        "batch_type",
+        "compatibility_status",
+        "recommendation",
+        "action_details",
+    ]
+    out_rows = []
+
+    for r in rows:
+        row_dict = dict(r)
+        # Determine record type based on populated values
+        is_reaction = bool(r.get("reaction_observed")) or (
+            bool(r.get("temp_rise")) and float(r.get("temp_rise", 0.0) or 0.0) > 0
+        ) or r.get("hypotension", "").lower() in ("true", "1", "yes")
+
+        is_mtp = bool(r.get("prbc") and str(r.get("prbc")).strip()) or bool(r.get("prbc_issued") and str(r.get("prbc_issued")).strip())
+
+        is_coldchain = bool(r.get("log_stream") and str(r.get("log_stream")).strip())
+
+        if is_reaction:
+            temp_rise = float(r.get("temp_rise", 0.0) or 0.0)
+            onset_min = int(float(r.get("onset_minutes", 15) or 15))
+            hypo = str(r.get("hypotension", "")).lower() in ("true", "1", "yes")
+            dysp = str(r.get("dyspnea", "")).lower() in ("true", "1", "yes")
+            hemo = str(r.get("hemoglobinuria", "")).lower() in ("true", "1", "yes")
+            urt = str(r.get("urticaria", "")).lower() in ("true", "1", "yes")
+            wheez = str(r.get("wheezing", "")).lower() in ("true", "1", "yes")
+            dat_pos = str(r.get("dat_positive", "")).lower() in ("true", "1", "yes")
+            gram_pos = str(r.get("gram_positive", "")).lower() in ("true", "1", "yes")
+            fluid_ov = str(r.get("fluid_overload", "")).lower() in ("true", "1", "yes")
+
+            triage = TransfusionSafetyManager.adjudicate_reaction(
+                temp_rise_c=temp_rise,
+                onset_minutes=onset_min,
+                hypotension=hypo,
+                dyspnea=dysp,
+                hemoglobinuria=hemo,
+                urticaria=urt,
+                wheezing_or_stridor=wheez,
+                dat_positive=dat_pos,
+                bacterial_gram_positive=gram_pos,
+                jvd_or_fluid_overload=fluid_ov,
+            )
+            row_dict["batch_type"] = "REACTION_TRIAGE"
+            row_dict["compatibility_status"] = triage["severity_grade"]
+            row_dict["recommendation"] = triage["adjudicated_reaction"]
+            row_dict["action_details"] = "; ".join(triage["immediate_actions"][:2])
+
+        elif is_mtp:
+            event_id = r.get("case_id", r.get("event_id", "MTP-BATCH"))
+            patient_id = r.get("patient_id", "P-MTP")
+            prbc = int(r.get("prbc", r.get("prbc_issued", 0)) or 0)
+            ffp = int(r.get("ffp", r.get("ffp_issued", 0)) or 0)
+            platelets = int(r.get("platelets", r.get("platelets_issued", 0)) or 0)
+            cryo = int(r.get("cryo", r.get("cryo_pools", 0)) or 0)
+
+            mtp = MTPTracker(
+                event_id=event_id,
+                patient_id=patient_id,
+                issued_prbc=prbc,
+                issued_ffp=ffp,
+                issued_platelets=platelets,
+                issued_cryo_pools=cryo,
+            )
+            status = mtp.get_status()
+            row_dict["batch_type"] = "MTP_RATIO_MONITORING"
+            row_dict["compatibility_status"] = f"Ratio: {status['current_ratio']} ({status['ratio_compliance_pct']}%)"
+            row_dict["recommendation"] = status["coagulopathy_risk_status"]
+            row_dict["action_details"] = status["recommendation"]
+
+        elif is_coldchain:
+            ptype_str = r.get("product_type", "pRBC")
+            monitor = ColdChainMonitor(BloodProductType(ptype_str))
+            log_str = r.get("log_stream", "")
+            for entry in log_str.split(","):
+                if ":" in entry:
+                    t_str, temp_str = entry.split(":", 1)
+                    monitor.record_reading(TempReading(float(t_str), float(temp_str), "sensor-batch"))
+            eval_res = monitor.evaluate_compliance()
+            row_dict["batch_type"] = "COLD_CHAIN_MONITORING"
+            row_dict["compatibility_status"] = "QUARANTINE" if eval_res["quarantine_required"] else "ACCEPTABLE"
+            row_dict["recommendation"] = eval_res["decision"]
+            row_dict["action_details"] = f"Out-of-storage: {eval_res['cumulative_out_of_storage_minutes']} min"
+
+        else:
+            # Immunohematology / Crossmatch evaluation
+            patient_id = r.get("patient_id", r.get("case_id", "P-001"))
+            patient_name = r.get("patient_name", "Anonymous")
+            patient_abo = r.get("patient_abo", r.get("patient_blood_type", "O+"))
+            ab_str = r.get("antibodies", r.get("identified_antibodies", ""))
+            antibodies = [a.strip() for a in ab_str.split(";") if a.strip()] if ";" in ab_str else [a.strip() for a in ab_str.split(",") if a.strip()]
+            req_str = r.get("special_requirements", r.get("special_reqs", ""))
+            special_reqs = [rq.strip() for rq in req_str.split(";") if rq.strip()] if ";" in req_str else [rq.strip() for rq in req_str.split(",") if rq.strip()]
+
+            donor_abo = r.get("donor_abo", r.get("donor_blood_type", "O-"))
+            unit_id = r.get("unit_id", "U-001")
+            product_type = r.get("product_type", "pRBC")
+            donor_ag_str = r.get("donor_antigens", "")
+            antigen_phenotype = {}
+            if donor_ag_str:
+                delimiter = ";" if ";" in donor_ag_str else ","
+                for item in donor_ag_str.split(delimiter):
+                    if ":" in item:
+                        k, v = item.split(":", 1)
+                        antigen_phenotype[k.strip()] = v.strip()
+
+            is_irrad = str(r.get("is_irradiated", r.get("irradiated", ""))).lower() in ("true", "1", "yes")
+            is_cmv = str(r.get("is_cmv_negative", r.get("cmv_negative", ""))).lower() in ("true", "1", "yes")
+            is_wash = str(r.get("is_washed", r.get("washed", ""))).lower() in ("true", "1", "yes")
+            is_quar = str(r.get("is_quarantined", r.get("quarantined", ""))).lower() in ("true", "1", "yes")
+
+            patient = PatientProfile(
+                patient_id=patient_id,
+                name=patient_name,
+                abo_rh=patient_abo,
+                identified_antibodies=antibodies,
+                special_requirements=special_reqs,
+            )
+
+            unit = BloodUnit(
+                unit_id=unit_id,
+                product_type=BloodProductType(product_type),
+                abo_rh=donor_abo,
+                antigen_phenotype=antigen_phenotype,
+                is_irradiated=is_irrad,
+                is_cmv_negative=is_cmv,
+                is_washed=is_wash,
+                is_quarantined=is_quar,
+            )
+
+            cm_res = CrossmatchEngine.crossmatch_unit(patient, unit)
+            compat = cm_res.get("compatible", False)
+            reasons = cm_res.get("reasons_incompatible", cm_res.get("reasons", []))
+
+            row_dict["batch_type"] = "CROSSMATCH_VERIFICATION"
+            row_dict["compatibility_status"] = "COMPATIBLE" if compat else "INCOMPATIBLE"
+            row_dict["recommendation"] = cm_res.get("recommendation", "")
+            row_dict["action_details"] = "; ".join(reasons) if reasons else "Compatible for transfusion issue"
+
+        out_rows.append(row_dict)
+
+    with open(args.output, mode="w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=out_fields)
+        writer.writeheader()
+        writer.writerows(out_rows)
+
+    print(f"Batch processed {len(out_rows)} records -> {args.output}")
+    return 0
+
+
 def cmd_interactive() -> int:
     print("Blood Bank Transfusion Safety Interactive CLI")
     print("Commands: crossmatch, donor-freq, mtp, cold-chain, triage, exit\n")
@@ -276,6 +433,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_rx.add_argument("--fluid-overload", action="store_true", help="JVD, peripheral edema, elevated BNP")
     p_rx.add_argument("--json", action="store_true", help="Output JSON")
 
+    # Subcommand: batch
+    p_batch = subparsers.add_parser("batch", help="Batch process CSV records of transfusion events")
+    p_batch.add_argument("-i", "--input", required=True, help="Path to input CSV file")
+    p_batch.add_argument("-o", "--output", default="results.csv", help="Path to output CSV file")
+
     # Subcommand: interactive
     subparsers.add_parser("interactive", help="Interactive REPL session")
 
@@ -295,6 +457,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return cmd_cold_chain(args)
     elif args.command == "reaction-triage":
         return cmd_reaction_triage(args)
+    elif args.command == "batch":
+        return cmd_batch(args)
     elif args.command == "interactive":
         return cmd_interactive()
     return 0
@@ -302,3 +466,4 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

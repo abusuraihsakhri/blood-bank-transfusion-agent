@@ -1,0 +1,16 @@
+case_id,patient_id,patient_name,patient_abo,identified_antibodies,special_requirements,unit_id,donor_abo,product_type,donor_antigens,is_irradiated,is_cmv_negative,is_washed,is_quarantined,prbc,ffp,platelets,cryo,temp_rise,onset_minutes,hypotension,dyspnea,hemoglobinuria,urticaria,wheezing,dat_positive,gram_positive,fluid_overload,reaction_observed,log_stream,clinical_indication
+CASE-001,PT-A101,Eleanor Vance,A+,Anti-K,Irradiated,U-RBC-8801,O+,pRBC,K:-,True,False,False,False,,,,,,,,,,,,,,,,,Elective total hip arthroplasty - compatible irradiated pRBC
+CASE-002,PT-B202,Marcus Chen,O-,,,U-RBC-8802,A-,pRBC,,False,False,False,False,,,,,,,,,,,,,,,,,Major abdominal trauma - ABO mismatch detection hold
+CASE-003,PT-C303,Sarah Jenkins,B+,Anti-Fya,,U-RBC-8803,B+,pRBC,Fya:+,False,False,False,False,,,,,,,,,,,,,,,,,Gastrointestinal hemorrhage - antigen positive conflict hold
+CASE-004,PT-EMERG,Trauma Bay Alpha,AB-,,,U-EMERG-01,O-,pRBC,D:-,False,False,False,False,,,,,,,,,,,,,,,,,Code Red Hemorrhagic Shock - Emergency uncrossmatched O- release
+CASE-005,PT-PL404,Liam O Connor,A,,,U-FFP-901,AB,FFP,,False,False,False,False,,,,,,,,,,,,,,,,,Liver transplant coagulopathy - Universal plasma compatibility
+CASE-006,PT-PL505,Amira Patel,AB,,,U-FFP-902,O,FFP,,False,False,False,False,,,,,,,,,,,,,,,,,Coagulopathy correction - Incompatible O plasma hold for AB patient
+CASE-007,PT-MTP01,David Miller,,,,,,,,,,,,6,6,6,2,,,,,,,,,,,,,Polytrauma MTP activation - Balanced 1:1:1 resuscitation compliance
+CASE-008,PT-MTP02,Sophia Rodriguez,,,,,,,,,,,,8,2,1,0,,,,,,,,,,,,,Ruptured AAA MTP - Critical FFP and platelet deficit alert
+CASE-009,PT-CC01,James Wilson,,,,,,pRBC,,,,,,,,,,,,,,,,,,,,,"0:4.0,15:5.5,35:9.0,75:9.2",Cooler excursion transit - Over 30 min excursion quarantine
+CASE-010,PT-CC02,Chloe Bennett,,,,,,pRBC,,,,,,,,,,,,,,,,,,,,,"0:3.5,10:4.2,20:4.8,25:3.9",Routine storage verification - Within AABB 1-6C limits
+CASE-011,PT-RX01,Arthur Pendelton,,,,,,,,,,,,,,,,2.2,15,True,False,True,False,False,True,False,False,True,,Acute hemolytic transfusion reaction (AHTR) - DAT+ hemoglobinuria
+CASE-012,PT-RX02,Beatrice Hall,,,,,,,,,,,,,,,,0.4,45,False,True,False,False,False,False,False,True,True,,Transfusion-associated circulatory overload (TACO) - Fluid overload
+CASE-013,PT-RX03,Carlos Mendoza,,,,,,,,,,,,,,,,0.6,60,True,True,False,False,False,False,False,False,True,,Transfusion-related acute lung injury (TRALI) - Non-cardiogenic ARDS
+CASE-014,PT-RX04,Diana Prince,,,,,,,,,,,,,,,,0.2,10,True,False,False,True,True,False,False,False,True,,Severe anaphylactic shock - Epinephrine protocol activation
+CASE-015,PT-RX05,Ethan Hunt,,,,,,,,,,,,,,,,3.1,20,True,False,False,False,False,False,True,False,True,,Platelet bacterial contamination sepsis - Septic shock protocol

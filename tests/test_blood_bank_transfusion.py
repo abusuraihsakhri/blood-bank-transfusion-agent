@@ -14,6 +14,8 @@ Comprehensive verification across:
 
 import io
 import json
+import os
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 
@@ -290,6 +292,26 @@ class TestCLIExecution(unittest.TestCase):
         self.assertEqual(ret, 0)
         data = json.loads(buf.getvalue())
         self.assertEqual(data["adjudicated_reaction"], ReactionType.TACO.value)
+
+    def test_cli_batch(self):
+        # Verify batch processing of sample.csv
+        sample_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "sample.csv")
+        if not os.path.exists(sample_path):
+            sample_path = "sample.csv"
+        with tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".csv") as tmp:
+            tmp_path = tmp.name
+        try:
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                ret = main(["batch", "-i", sample_path, "-o", tmp_path])
+            self.assertEqual(ret, 0)
+            self.assertTrue(os.path.exists(tmp_path))
+            with open(tmp_path, encoding="utf-8") as f:
+                lines = f.readlines()
+            self.assertGreaterEqual(len(lines), 16)  # Header + 15 rows
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
 
 
 class TestAdditionalTransfusionScenarios(unittest.TestCase):

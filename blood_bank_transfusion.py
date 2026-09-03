@@ -156,8 +156,12 @@ class CrossmatchEngine:
 
         if unit.is_quarantined:
             return {
+                "patient_id": patient.patient_id,
+                "unit_id": unit.unit_id,
+                "product_type": unit.product_type.value,
                 "compatible": False,
                 "reasons": ["Unit is quarantined due to cold-chain excursion or testing hold"],
+                "reasons_incompatible": ["Unit is quarantined due to cold-chain excursion or testing hold"],
                 "recommendation": "DO NOT ISSUE - Unit Quarantined",
             }
 
