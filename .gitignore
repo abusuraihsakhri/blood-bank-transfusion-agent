@@ -145,3 +145,6 @@ results.csv
 output.csv
 out_smoke.csv
 
+
+# GitHub Pages build output
+_site/

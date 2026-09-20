@@ -59,10 +59,11 @@ class TransfusionSafetyManager:
         if patient_data.get("name") and unit_data.get("patient_name"):
             checks["patient_identity"] = patient_data["name"] == unit_data["patient_name"]
         else:
-            checks["patient_identity"] = True
+            checks["patient_identity"] = False
 
         checks["blood_type_match"] = patient_data.get("blood_type") == unit_data.get("blood_type")
         checks["consent_documented"] = patient_data.get("consent_signed", False)
+        checks["antibody_screen_complete"] = bool(unit_data.get("antibody_screen_complete", False))
         checks["crossmatch_compatible"] = unit_data.get("crossmatch_result") == "compatible"
 
         all_passed = all(checks.values())
@@ -88,10 +89,10 @@ class TransfusionSafetyManager:
 
         type_actions = {
             ReactionType.HEMOLYTIC: "Draw new sample for re-crossmatch, check for hemolysis",
-            ReactionType.FEBRILE_NON_HEMOLYTIC: "Administer antipyretics, consider白细胞过滤 for future units",
+            ReactionType.FEBRILE_NON_HEMOLYTIC: "Administer antipyretics; consider leukoreduced components for future transfusions when indicated",
             ReactionType.ALLERGIC: "Administer antihistamines, monitor for progression",
             ReactionType.ANAPHYLACTIC: "Epinephrine, IV fluids, activate anaphylaxis protocol",
-            ReactionType.TRALI: "Oxygen support, diuretics if needed, notify blood bank",
+            ReactionType.TRALI: "Provide supportive respiratory care; avoid routine diuresis unless there is independent evidence of volume overload; notify blood bank",
             ReactionType.TACO: "Slow or stop transfusion, assess fluid status, consider diuretics",
         }
 
@@ -110,7 +111,7 @@ class TransfusionSafetyManager:
         checklist = {
             "check_patient_identity": True,
             "verify_blood_type": True,
-            "inspect_unit外观": True,
+            "inspect_unit_appearance": True,
             "check_transfusion_rate": True,
             "review_patient_history": True,
         }
