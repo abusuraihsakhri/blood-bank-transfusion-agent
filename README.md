@@ -1,5 +1,7 @@
 # Blood Bank Transfusion Agent
 
+### [Open the Live Application →](https://abusuraihsakhri.github.io/blood-bank-transfusion-agent/)
+
 A Python reference implementation for several transfusion-medicine calculations and rule-based demonstrations:
 
 - ABO/Rh component compatibility and alloantigen checks
@@ -15,7 +17,6 @@ A Python reference implementation for several transfusion-medicine calculations 
 
 The repository includes a static browser interface (`index.html`, `styles.css`, `app.js`). It runs the same Python rule engine client-side with Pyodide. No application server is required, and data entered into the interface is processed in the browser.
 
-The live GitHub Pages link is added here only after deployment has been verified.
 
 ## Command line
 
