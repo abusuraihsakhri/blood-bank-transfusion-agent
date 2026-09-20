@@ -1,7 +1,7 @@
 """
 Blood Bank & Transfusion Safety Management Engine
 =================================================
-Comprehensive clinical decision support and hemovigilance platform for:
+Reference rule engine and demonstration utilities for:
 - ABO/Rh(D) component-specific compatibility (RBC, FFP, Platelets, Cryo)
 - Alloantibody screening, rule-out panel adjudication, and antigen-negative frequency
 - Massive Transfusion Protocol (MTP) 1:1:1 balanced ratio monitoring
@@ -166,9 +166,15 @@ class CrossmatchEngine:
             }
 
         # 1. ABO/Rh compatibility
-        if unit.product_type in [BloodProductType.PRBC, BloodProductType.WHOLE_BLOOD]:
+        if unit.product_type == BloodProductType.PRBC:
             if not cls.check_rbc_compatibility(patient.abo_rh, unit.abo_rh):
                 reasons_incompatible.append(f"ABO/Rh incompatible pRBC: Donor {unit.abo_rh} -> Patient {patient.abo_rh}")
+        elif unit.product_type == BloodProductType.WHOLE_BLOOD:
+            if patient.abo_rh.strip().upper() != unit.abo_rh.strip().upper():
+                reasons_incompatible.append(
+                    f"Whole blood requires ABO/Rh-identical selection by default: Donor {unit.abo_rh} -> "
+                    f"Patient {patient.abo_rh}; low-titer group O exceptions require a validated local policy"
+                )
         elif unit.product_type in [BloodProductType.FFP, BloodProductType.CRYOPRECIPITATE]:
             if not cls.check_plasma_compatibility(patient.abo_rh, unit.abo_rh):
                 reasons_incompatible.append(f"ABO incompatible Plasma: Donor {unit.abo_rh} -> Patient {patient.abo_rh}")
@@ -479,5 +485,9 @@ class TransfusionSafetyManager:
             "immediate_actions": immediate_actions,
             "investigation_workup": investigation_workup,
             "requires_blood_bank_notification": True,
-            "fda_cber_reporting_mandatory": severity in [ReactionSeverity.GRADE_4_LIFE_THREATENING, ReactionSeverity.GRADE_5_FATAL],
+            "fda_cber_reporting_mandatory": severity == ReactionSeverity.GRADE_5_FATAL,
+            "fda_cber_reporting_note": (
+                "FDA 21 CFR 606.170(b) fatality reporting applies to confirmed transfusion-related fatalities; "
+                "other reactions may have separate institutional, state, accreditation, or hemovigilance reporting requirements."
+            ),
         }
