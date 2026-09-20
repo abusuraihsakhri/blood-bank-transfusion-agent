@@ -3,25 +3,36 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "blood-bank-transfusion-engine"
-version = "2.0.0"
-description = "TransfusionGuard: Autonomous Blood Bank Compatibility & Crossmatch Safety Engine"
+name = "blood-bank-transfusion-agent"
+version = "2.1.0"
+description = "Transfusion-medicine compatibility, ratio, cold-chain, and reaction-triage reference tools"
 readme = "README.md"
-authors = [{ name = "Dr. Abu Suraih Sakhri", email = "abusuraih@example.com" }]
+authors = [{ name = "Abu Suraih Sakhri" }]
 license = { text = "MIT" }
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = []
 
 [project.scripts]
-blood-bank-transfusion-engine = "blood_bank_transfusion_agent.cli:main"
+blood-bank-transfusion-agent = "blood_bank_transfusion_agent.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/abusuraihsakhri/blood-bank-transfusion-engine"
-Repository = "https://github.com/abusuraihsakhri/blood-bank-transfusion-engine.git"
+Homepage = "https://github.com/abusuraihsakhri/blood-bank-transfusion-agent"
+Repository = "https://github.com/abusuraihsakhri/blood-bank-transfusion-agent.git"
+
+[tool.setuptools]
+py-modules = [
+    "blood_bank_transfusion",
+    "cli",
+    "crossmatch_engine",
+    "inventory_manager",
+    "mtp_ratio_coldchain",
+    "transfusion_guard",
+    "transfusion_safety",
+]
+packages = ["blood_bank_transfusion_agent"]
