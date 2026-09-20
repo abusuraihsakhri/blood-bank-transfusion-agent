@@ -189,7 +189,7 @@ class TestTransfusionReactionSafety(unittest.TestCase):
         )
         self.assertEqual(res["adjudicated_reaction"], ReactionType.AHTR.value)
         self.assertEqual(res["severity_grade"], ReactionSeverity.GRADE_4_LIFE_THREATENING.value)
-        self.assertTrue(res["fda_cber_reporting_mandatory"])
+        self.assertFalse(res["fda_cber_reporting_mandatory"])\n        self.assertIn("fatalit", res["fda_cber_reporting_note"].lower())
 
     def test_trali_vs_taco_differentiation(self):
         # TRALI: Dyspnea without fluid overload
