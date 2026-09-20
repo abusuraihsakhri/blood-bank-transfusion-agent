@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Browser-based blood bank transfusion calculation and safety demonstrations.">
+  <meta name="color-scheme" content="light dark">
+  <title>Blood Bank Transfusion Tools</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Transfusion medicine utilities</p>
+        <h1>Blood Bank Transfusion Tools</h1>
+        <p class="subtitle">Crossmatch, donor-frequency, MTP ratio, cold-chain, and reaction-triage demonstrations.</p>
+      </div>
+      <div class="topbar-actions">
+        <span id="runtimeStatus" class="status-badge" role="status" aria-live="polite">Loading Python…</span>
+        <button id="themeToggle" class="icon-button" type="button" aria-label="Toggle dark mode" title="Toggle theme">◐</button>
+      </div>
+    </header>
+
+    <section class="notice" aria-label="Important limitation">
+      <strong>Demonstration only.</strong> The rules are simplified and must not replace validated local transfusion-service procedures, specialist review, or regulatory requirements.
+    </section>
+
+    <nav class="tabs" aria-label="Tools">
+      <button class="tab is-active" type="button" data-tool="crossmatch">Crossmatch</button>
+      <button class="tab" type="button" data-tool="donor">Donor frequency</button>
+      <button class="tab" type="button" data-tool="mtp">MTP ratio</button>
+      <button class="tab" type="button" data-tool="coldchain">Cold chain</button>
+      <button class="tab" type="button" data-tool="reaction">Reaction triage</button>
+    </nav>
+
+    <section class="workspace">
+      <div class="tool-panel">
+        <form id="crossmatchForm" class="tool-form is-active" data-panel="crossmatch">
+          <div class="form-head">
+            <div><h2>Component compatibility</h2><p>ABO/Rh, alloantigen conflicts, and processing requirements.</p></div>
+          </div>
+          <div class="form-grid three">
+            <label>Recipient ABO/Rh<select name="patient_abo"><option>O-</option><option>O+</option><option>A-</option><option selected>A+</option><option>B-</option><option>B+</option><option>AB-</option><option>AB+</option></select></label>
+            <label>Donor ABO/Rh<select name="donor_abo"><option>O-</option><option selected>O+</option><option>A-</option><option>A+</option><option>B-</option><option>B+</option><option>AB-</option><option>AB+</option></select></label>
+            <label>Component<select name="product_type"><option value="pRBC">pRBC</option><option value="FFP">FFP</option><option value="Platelets">Platelets</option><option value="Cryoprecipitate">Cryoprecipitate</option><option value="WholeBlood">Whole blood</option></select></label>
+          </div>
+          <div class="form-grid two">
+            <label>Recipient antibodies<input name="antibodies" value="Anti-K" placeholder="Anti-K, Anti-Fya"></label>
+            <label>Donor antigens<input name="donor_antigens" value="K:-" placeholder="K:-, Fya:+"></label>
+          </div>
+          <fieldset class="checks"><legend>Requirements / unit attributes</legend>
+            <label><input type="checkbox" name="req_irradiated"> Requires irradiated</label>
+            <label><input type="checkbox" name="unit_irradiated"> Unit irradiated</label>
+            <label><input type="checkbox" name="req_cmv"> Requires CMV-negative</label>
+            <label><input type="checkbox" name="unit_cmv"> Unit CMV-negative</label>
+            <label><input type="checkbox" name="req_washed"> Requires washed</label>
+            <label><input type="checkbox" name="unit_washed"> Unit washed</label>
+            <label><input type="checkbox" name="quarantined"> Unit quarantined</label>
+          </fieldset>
+          <div class="form-actions"><button class="primary" type="submit">Analyze compatibility</button></div>
+        </form>
+
+        <form id="donorForm" class="tool-form" data-panel="donor">
+          <div class="form-head"><div><h2>Compatible donor frequency</h2><p>Approximate compatible-unit frequency from ABO/Rh and antigen-negative assumptions.</p></div></div>
+          <div class="form-grid two">
+            <label>Recipient ABO/Rh<select name="patient_abo"><option>O-</option><option selected>O+</option><option>A-</option><option>A+</option><option>B-</option><option>B+</option><option>AB-</option><option>AB+</option></select></label>
+            <label>Antibodies<input name="antibodies" value="Anti-K, Anti-Fya" placeholder="Anti-K, Anti-Fya"></label>
+          </div>
+          <p class="hint">Population frequencies in the Python model are simplified estimates and are not a donor-inventory forecast.</p>
+          <div class="form-actions"><button class="primary" type="submit">Estimate frequency</button></div>
+        </form>
+
+        <form id="mtpForm" class="tool-form" data-panel="mtp">
+          <div class="form-head"><div><h2>MTP component ratio</h2><p>Tracks the model's pRBC:FFP:platelet balance.</p></div></div>
+          <div class="form-grid four">
+            <label>pRBC units<input name="prbc" type="number" min="0" step="1" value="6"></label>
+            <label>FFP units<input name="ffp" type="number" min="0" step="1" value="6"></label>
+            <label>Platelet units<input name="platelets" type="number" min="0" step="1" value="6"></label>
+            <label>Cryo pools<input name="cryo" type="number" min="0" step="1" value="0"></label>
+          </div>
+          <div class="form-actions"><button class="primary" type="submit">Check ratio</button></div>
+        </form>
+
+        <form id="coldchainForm" class="tool-form" data-panel="coldchain">
+          <div class="form-head"><div><h2>Cold-chain excursion</h2><p>Evaluates sampled temperature/time pairs using the repository's configured thresholds.</p></div></div>
+          <div class="form-grid two">
+            <label>Component<select name="product_type"><option value="pRBC">pRBC</option><option value="FFP">FFP</option><option value="Platelets">Platelets</option></select></label>
+            <label>Time:temperature pairs<input name="log_stream" value="0:4.0,10:8.5,55:8.5,56:4.0" spellcheck="false"></label>
+          </div>
+          <p class="hint">Example: <code>0:4.0,10:8.5,55:8.5,56:4.0</code>. Times are minutes; temperatures are °C.</p>
+          <div class="form-actions"><button class="primary" type="submit">Evaluate excursion</button></div>
+        </form>
+
+        <form id="reactionForm" class="tool-form" data-panel="reaction">
+          <div class="form-head"><div><h2>Reaction triage</h2><p>Rule-based demonstration of the repository's adverse-reaction classifier.</p></div></div>
+          <div class="form-grid two compact-fields">
+            <label>Temperature rise (°C)<input name="temp_rise" type="number" step="0.1" value="0.4"></label>
+            <label>Onset (minutes)<input name="onset_minutes" type="number" min="0" step="1" value="45"></label>
+          </div>
+          <fieldset class="checks reaction-checks"><legend>Observed features</legend>
+            <label><input type="checkbox" name="hypotension"> Hypotension</label>
+            <label><input type="checkbox" name="dyspnea" checked> Dyspnea</label>
+            <label><input type="checkbox" name="hemoglobinuria"> Hemoglobinuria</label>
+            <label><input type="checkbox" name="urticaria"> Urticaria</label>
+            <label><input type="checkbox" name="wheezing"> Wheeze / stridor</label>
+            <label><input type="checkbox" name="dat_positive"> DAT positive</label>
+            <label><input type="checkbox" name="gram_positive"> Gram stain positive</label>
+            <label><input type="checkbox" name="fluid_overload" checked> Fluid overload / JVD</label>
+          </fieldset>
+          <div class="form-actions"><button class="primary" type="submit">Run triage</button></div>
+        </form>
+      </div>
+
+      <aside class="result-panel" aria-live="polite">
+        <div class="result-head"><div><p class="eyebrow">Result</p><h2 id="resultTitle">Ready</h2></div><button id="copyResult" type="button" class="secondary" disabled>Copy JSON</button></div>
+        <div id="resultSummary" class="summary-card"><p>Select a tool and run an analysis. All case data stays in this browser tab; the page only downloads the Pyodide runtime and repository Python source.</p></div>
+        <pre id="resultJson" class="json-output" tabindex="0">{}</pre>
+      </aside>
+    </section>
+
+    <footer>
+      <span>No patient data is transmitted by the application.</span>
+      <a href="https://github.com/abusuraihsakhri/blood-bank-transfusion-agent" rel="noopener noreferrer">Source repository</a>
+    </footer>
+  </main>
+</body>
+</html>
